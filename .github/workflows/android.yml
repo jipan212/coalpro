@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: "3.10"
 
     - name: Install system dependencies
       run: |
@@ -28,24 +28,35 @@ jobs:
           python3-pip \
           libffi-dev \
           libssl-dev \
-          zlib1g-dev \
-          wget
+          zlib1g-dev
 
+    - name: Install Android SDK + Build Tools
+      run: |
+        mkdir -p $HOME/android-sdk
+        cd $HOME/android-sdk
+
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmd.zip
+        unzip cmd.zip -d cmd
+        mkdir -p cmd/cmdline-tools
+        mv cmd/* cmd/cmdline-tools/ || true
+
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$ANDROID_HOME/cmd/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH
+
+        yes | $ANDROID_HOME/cmd/cmdline-tools/bin/sdkmanager --licenses
+        yes | $ANDROID_HOME/cmd/cmdline-tools/bin/sdkmanager \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2"
+
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_HOME/build-tools/33.0.2:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
+        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
+    - name: Install Buildozer
+      run: |
         pip install --upgrade pip
         pip install buildozer cython
-
-    - name: Install Android SDK
-      run: |
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        mkdir -p $HOME/android-sdk/cmdline-tools
-        unzip commandlinetools-linux-11076708_latest.zip -d $HOME/android-sdk/cmdline-tools
-        mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
-
-        export ANDROID_SDK_ROOT=$HOME/android-sdk
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
-
-        yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
     - name: Build APK
       run: |

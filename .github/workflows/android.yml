@@ -10,15 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
-    - name: Install system dependencies
+    - name: Install system packages
       run: |
         sudo apt update
         sudo apt install -y \
@@ -28,30 +26,28 @@ jobs:
           python3-pip \
           libffi-dev \
           libssl-dev \
-          zlib1g-dev
+          zlib1g-dev \
+          wget
 
-    - name: Install Android SDK + Build Tools
+    - name: Setup Android SDK
       run: |
-        mkdir -p $HOME/android-sdk
-        cd $HOME/android-sdk
+        mkdir -p $HOME/android-sdk/cmdline-tools
+        cd $HOME/android-sdk/cmdline-tools
 
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmd.zip
-        unzip cmd.zip -d cmd
-        mkdir -p cmd/cmdline-tools
-        mv cmd/* cmd/cmdline-tools/ || true
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
+        unzip tools.zip
+
+        mv cmdline-tools latest
 
         export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmd/cmdline-tools/bin:$ANDROID_HOME/platform-tools:$PATH
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
-        yes | $ANDROID_HOME/cmd/cmdline-tools/bin/sdkmanager --licenses
-        yes | $ANDROID_HOME/cmd/cmdline-tools/bin/sdkmanager \
-          "platform-tools" \
-          "platforms;android-33" \
-          "build-tools;33.0.2"
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
         echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "PATH=$ANDROID_HOME/build-tools/33.0.2:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/build-tools/33.0.2:$ANDROID_HOME/platform-tools:$PATH" >> $GITHUB_ENV
 
     - name: Install Buildozer
       run: |
